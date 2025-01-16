@@ -1,0 +1,16 @@
+[package]
+name = "lib-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Local deps
+lib-sorter = { path = "../lib-sorter" }
+lib-utils = { path = "../lib-utils" }
+
+# External deps
+dirs = "5.0"
+execute = "0.2"
+tokio = { version = "1.41.1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+typeshare = "1.0.0"

@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/libs/lib-core",
+    "crates/libs/lib-sorter",
+    "crates/libs/lib-utils",
+    "crates/services/video_converter/src-tauri",
+    "crates/services/video_converter_cli",
+]
