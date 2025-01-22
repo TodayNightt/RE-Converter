@@ -1,5 +1,6 @@
 import { type Accessor, type FlowProps, type Setter, Show } from "solid-js";
 import SwitchW from "./switch";
+import { useAppState } from "~/appContext";
 
 type SwitchToggleProps = FlowProps & {
   additionalCss?: string;
@@ -7,6 +8,7 @@ type SwitchToggleProps = FlowProps & {
 };
 
 function SwitchToggle(props: SwitchToggleProps) {
+
   return (
     <div class="flex flex-col gap-4">
       <SwitchW reactiveSwitch={props.reactiveSwitch} />

@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+.lxgw-wenkai-mono-tc {
+  font-family: "LXGW WenKai Mono TC", serif;
+  font-weight: 700;
+  font-style: normal;
+}
+.poppins {
+  font-family: "Poppins", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.poppins-bold {
+  font-family: "Poppins", serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.kaisei-decol {
+  font-family: "Kaisei Decol", serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+
+
+
 @layer base {
   :root {
     --background: 0 0% 100%;

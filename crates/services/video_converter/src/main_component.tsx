@@ -43,12 +43,13 @@ import { type Locale, locales } from "~/lib/types";
 import OutputExtensionComponent from "./components/output_extension";
 import { showToast, Toaster } from "./components/ui/toast";
 import { Badge } from "./components/ui/badge";
-import { ioStore, setIoStore } from "./lib/io_store";
+import { setIoStore } from "./lib/io_store";
 import { cancel, convert } from "./lib/websocket_messages";
+import { getLocaleFontClass } from "./lib/utils";
 
 function MainComponent() {
   const ctx = useAppState();
-  const { t, locale, setLocale, config } = ctx;
+  const { t, locale, setLocale } = ctx;
   let ws!: WebSocket;
   const [needSorting, setNeedSorting] = createSignal<boolean>(true);
   const [progress, updateProgress] = createSignal<ProgressInfo[]>([]);
@@ -63,6 +64,10 @@ function MainComponent() {
   );
 
   const stillDefault = createMemo(() => stillDefaults().every((v) => v));
+
+  // Create memo for font class
+  const fontClass = createMemo(() => getLocaleFontClass(locale()));
+  createEffect(() => console.log("font-class", fontClass()));
 
   onMount(async () => {
     try {
@@ -118,18 +123,26 @@ function MainComponent() {
 
   return (
     <Show when={ctx.config?.getConfig()}>
-      <main class="container h-full">
+      <main class={`container h-full ${fontClass()}`}>
         <div class="grid grid-rows-section-llm  grid-cols-3 h-full w-full">
           <nav class="flex justify-end items-end col-span-3 px-4">
             <RadioGroup
               class="flex justify-end w-full col-span-3 p-4"
-              defaultValue={locale}
+              defaultValue={locale()}
               onChange={(val: string) => setLocale(val as Locale)}
             >
               <For each={locales}>
-                {(locake) => (
+                {(locake: Locale) => (
                   <RadioGroupItem value={locake}>
-                    <RadioGroupItemLabel>{locake}</RadioGroupItemLabel>
+                    <RadioGroupItemLabel
+                      class={`${getLocaleFontClass(locake)} `}
+                    >
+                      {locake === "ja"
+                        ? "日本語"
+                        : locake === "zh-tw"
+                        ? "中文"
+                        : "English"}
+                    </RadioGroupItemLabel>
                   </RadioGroupItem>
                 )}
               </For>
@@ -137,7 +150,7 @@ function MainComponent() {
             <Show when={stillDefault()}>
               <div class="flex justify-center items-center">
                 <Badge round class="w-[6rem] h-5 justify-center p-4">
-                  Last Saved
+                  {t("lastSaved")}
                 </Badge>
               </div>
             </Show>
@@ -230,7 +243,7 @@ function MainComponent() {
                       </TableRow>
                       <TableRow>
                         <TableCell class="w-[10rem] h-[150px] flex flex-col gap-5 items-center justify-center">
-                          <Label class="text-lg">Video Bitrate</Label>
+                          <Label class="text-lg">{t("video")}</Label>
                         </TableCell>
                         <TableCell class="w-full" colSpan={3}>
                           <BitrateSetting
@@ -252,7 +265,7 @@ function MainComponent() {
                       </TableRow>
                       <TableRow>
                         <TableCell class="w-[10rem] h-[150px] flex flex-col gap-5 items-center justify-center">
-                          <Label class="text-lg">Audio Bitrate</Label>
+                          <Label class="text-lg">{t("audioBitrate")}</Label>
                         </TableCell>
                         <TableCell class="w-full" colSpan={3}>
                           <BitrateSetting
@@ -263,7 +276,7 @@ function MainComponent() {
                       </TableRow>
                       <TableRow>
                         <TableCell class="w-[10rem] h-[150px] flex flex-col gap-5 items-center justify-center">
-                          <Label class="text-lg">Picture Format</Label>
+                          <Label class="text-lg">{t("pictureFormat")}</Label>
                         </TableCell>
                         <TableCell class="w-full" colSpan={3}>
                           <PictureFormatComponent
@@ -285,7 +298,7 @@ function MainComponent() {
               <AccordionItem value="output">
                 <AccordionTrigger class="hover:no-underline justify-start gap-4 font-bold text-xl">
                   <TbProgressCheck />
-                  Output
+                  {t("output")}
                 </AccordionTrigger>
                 <AccordionContent>
                   <div class="grid">
@@ -330,7 +343,7 @@ function MainComponent() {
               </Show>
               <Show when={converting()}>
                 <CgSpinnerTwo class="animate-spin size-6" />
-                Converting
+                {t("converting")}
               </Show>
             </Button>
             <Show when={converting()}>
@@ -338,7 +351,7 @@ function MainComponent() {
                 class="underline bg-white text-black m-0 hover:bg-white h-fit p-4 size-2"
                 onClick={() => cancel(ws)}
               >
-                Cancel
+                {t("cancel")}
               </Button>
             </Show>
           </div>

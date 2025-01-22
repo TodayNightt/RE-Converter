@@ -1,4 +1,4 @@
-import type { Setter } from "solid-js";
+import type { Accessor, Setter } from "solid-js";
 import type ConfigSingleton from "./config_singleton";
 import type { Part, SetStoreFunction } from "solid-js/store";
 import type { IoStore } from "./io_store";
@@ -12,7 +12,7 @@ export type Dictionary = {
 };
 
 export type AppState = {
-    locale: Locale;
+    locale: Accessor<Locale>;
     setLocale: (value: Locale) => void;
     t: (key: string) => string;
     config: ConfigSingleton | undefined;

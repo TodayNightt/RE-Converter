@@ -31,11 +31,14 @@ export const AppContextProvider: ParentComponent = (props: ParentProps) => {
 
   const t = i18n.translator(dict);
 
-  setLastSavedStore(config().getConfig()?.last_saved);
+  const lastSaved = config().getConfig()?.last_saved;
+  if (lastSaved !== undefined) {
+    setLastSavedStore(lastSaved);
+  }
 
   const state: AppState = {
     get locale() {
-      return locale();
+      return locale;
     },
     setLocale(value) {
       console.log(value);

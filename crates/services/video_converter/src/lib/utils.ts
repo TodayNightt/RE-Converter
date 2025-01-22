@@ -22,3 +22,14 @@ export function updateStillDefault<T>(
     });
   }
 }
+
+export function getLocaleFontClass(locale: string): string {
+  switch (locale) {
+    case "ja":
+      return "kaisei-decol";
+    case "zh-tw":
+      return "lxgw-wenkai-mono-tc";
+    default:
+      return "poppins";
+  }
+}

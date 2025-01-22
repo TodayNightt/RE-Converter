@@ -12,6 +12,13 @@ export const dict: Dict = {
 	resolution: "解像度",
 	matchSource: "ソースの一致する",
 	custom: "カスタム",
-	needSorting: "Need Sorting",
-	outputExtension: "Output extension"
+	needSorting: "ソートする",
+	outputExtension: "出力拡張子",
+	lastSaved: "最後に使用した設定",
+	videoBitrate: "動画ビットレート",
+	audioBitrate: "音声ビットレート",
+	pictureFormat: "色域サンプリング",
+	converting: "変換中",
+	cancel: "キャンセル",
+	output: "結果"
 }

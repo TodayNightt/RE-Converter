@@ -11,7 +11,14 @@ export const dict = {
 	matchSource: "Match source",
 	custom: "Custom",
 	needSorting: "Need sorting",
-	outputExtension: "Output Extension"
+	outputExtension: "Output Extension",
+	lastSaved: "Last Saved",
+	videoBitrate: "Video Bitrate",
+	audioBitrate: "Audio Bitrate",
+	pictureFormat: "Picture Format",
+	converting: "Converting",
+	cancel: "Cancel",
+	output: "Output",
 }
 
 export type Dict = typeof dict;

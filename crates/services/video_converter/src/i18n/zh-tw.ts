@@ -12,6 +12,13 @@ export const dict: Dict = {
     resolution: "清晰度",
     matchSource: "符合來源",
     custom: "自訂",
-    needSorting: "Need Sorting",
-    outputExtension: "Output Extension"
+    needSorting: "需要分類",
+    outputExtension: "副檔名",
+    lastSaved: "最後使用設定",
+    videoBitrate: "影片位元速率",
+    audioBitrate: "音檔速率",
+    pictureFormat: "色彩採樣",
+    converting: "轉換中",
+    cancel: "取消",
+    output: "結果"
 }
