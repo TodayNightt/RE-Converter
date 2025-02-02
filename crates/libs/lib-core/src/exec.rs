@@ -1,3 +1,4 @@
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 use std::{path::PathBuf, process::Stdio, sync::Arc};
 
 use lib_utils::file::FileExt;
@@ -53,6 +54,7 @@ async fn exec_ffmpeg(source: FileExt, des: PathBuf, flag: FfmpegOptions) -> Resu
         .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
+        .creation_flags(CREATE_NO_WINDOW)
         .output()
         .await
         .map_err(|err| Error::FfmpegError(format!("Failed to execute FFmpeg: {:?}", err)))?;
