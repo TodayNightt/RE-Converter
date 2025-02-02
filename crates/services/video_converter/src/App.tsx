@@ -33,7 +33,7 @@ function App() {
       <AlertDialog open={ffmpegNotInstalled()}>
         <AlertDialogContent>
           <AlertDialogTitle>Ffmpeg is not installed</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogDescription class="poppins">
             Ffmpeg is not installed in your pc. Kindly install it then open the
             application
             <br />

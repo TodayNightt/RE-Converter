@@ -67,7 +67,6 @@ function MainComponent() {
 
   // Create memo for font class
   const fontClass = createMemo(() => getLocaleFontClass(locale()));
-  createEffect(() => console.log("font-class", fontClass()));
 
   onMount(async () => {
     try {
@@ -117,15 +116,11 @@ function MainComponent() {
     }
   });
 
-  createEffect(() => {
-    console.log(ctx.config?.getConfig());
-  });
-
   return (
     <Show when={ctx.config?.getConfig()}>
       <main class={`container h-full ${fontClass()}`}>
         <div class="grid grid-rows-section-llm  grid-cols-3 h-full w-full">
-          <nav class="flex justify-end items-end col-span-3 px-4">
+          <nav class="flex justify-end items-center col-span-3 px-4">
             <RadioGroup
               class="flex justify-end w-full col-span-3 p-4"
               defaultValue={locale()}
@@ -133,9 +128,14 @@ function MainComponent() {
             >
               <For each={locales}>
                 {(locake: Locale) => (
-                  <RadioGroupItem value={locake}>
+                  <RadioGroupItem
+                    value={locake}
+                    class="flex justify-center items-center"
+                  >
                     <RadioGroupItemLabel
-                      class={`${getLocaleFontClass(locake)} `}
+                      class={`${getLocaleFontClass(
+                        locake
+                      )} flex justify-center items-center`}
                     >
                       {locake === "ja"
                         ? "日本語"
@@ -149,7 +149,7 @@ function MainComponent() {
             </RadioGroup>
             <Show when={stillDefault()}>
               <div class="flex justify-center items-center">
-                <Badge round class="w-[6rem] h-5 justify-center p-4">
+                <Badge round class="w-[6rem] h-6 justify-center p-4">
                   {t("lastSaved")}
                 </Badge>
               </div>
@@ -338,8 +338,10 @@ function MainComponent() {
               disabled={converting()}
             >
               <Show when={!converting()}>
-                {t("convert")}
-                <CgArrowsExchangeAlt class="size-8" />
+                <div class="flex gap-4 justify-center items-center">
+                  {t("convert")}
+                  <CgArrowsExchangeAlt class="size-6" />
+                </div>
               </Show>
               <Show when={converting()}>
                 <CgSpinnerTwo class="animate-spin size-6" />
@@ -355,7 +357,7 @@ function MainComponent() {
               </Button>
             </Show>
           </div>
-          <Toaster />
+          <Toaster class="poppins" />
         </div>
       </main>
     </Show>
