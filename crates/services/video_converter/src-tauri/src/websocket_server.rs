@@ -166,9 +166,7 @@ async fn handle_message(
                             progress_guard.start(
                                 move |infos| {
                                     let stcc = Arc::clone(&stc);
-                                    println!("func_ptr {:?}", infos);
                                     async move {
-                                        println!("Async block");
                                         if let Err(e) = stcc
                                             .send(WSMessage::text(
                                                 serde_json::to_string(&Message::Progress(infos))

@@ -262,6 +262,7 @@ impl Converter {
         // Create the output directory
         let mut output = options.output_dir.clone();
         output.push(name);
+        output.push(" 原");
 
         if let Err(e) = create_directory_with_permissions(&output) {
             eprintln!("Failed to create directory {:?}: {:?}", output, e);

@@ -52,7 +52,6 @@ function MainComponent() {
   const ctx = useAppState();
   const { t, locale, setLocale, config } = ctx;
   let ws!: WebSocket;
-  const [needSorting, setNeedSorting] = createSignal<boolean>(true);
   const [progress, updateProgress] = createSignal<ProgressInfo[]>([]);
 
   const [converting, setConverting] = createSignal<boolean>(false);
@@ -219,8 +218,10 @@ function MainComponent() {
                         </TableCell>
                         <TableCell>
                           <Checkbox
-                            checked={needSorting()}
-                            onChange={setNeedSorting}
+                            checked={ioStore.needSorting}
+                            onChange={(state) =>
+                              setIoStore("needSorting", state)
+                            }
                           />
                         </TableCell>
                         <TableCell class="h-[150px] flex gap-5 items-center justify-center">
@@ -335,7 +336,7 @@ function MainComponent() {
                         folderName,
                       }) => (
                         <Progress
-                          value={currentProgress - 1}
+                          value={currentProgress}
                           minValue={0}
                           maxValue={totalProgress}
                           getValueLabel={({ value, max }) =>
@@ -345,7 +346,7 @@ function MainComponent() {
                         >
                           <div class="flex justify-between ">
                             <ProgressLabel>{`Folder [${folderName}]`}</ProgressLabel>
-                            <ProgressLabel>{`Currently converting ${fileName}`}</ProgressLabel>
+                            <ProgressLabel>{`${fileName}`}</ProgressLabel>
                             <ProgressValueLabel />
                           </div>
                         </Progress>
