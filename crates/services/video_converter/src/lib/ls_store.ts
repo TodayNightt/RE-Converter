@@ -2,8 +2,8 @@ import { createStore } from "solid-js/store";
 import type { IoStore } from "./io_store";
 
 export const [lastSavedStore, setLastSavedStore] = createStore<IoStore>({
-    inputFolder: "",
-    outputFolder: "",
+    inputFolder: null,
+    outputFolder: null,
     resolution: null,
     audioBitrate: null,
     videoBitrate: null,
@@ -13,3 +13,4 @@ export const [lastSavedStore, setLastSavedStore] = createStore<IoStore>({
     outputExtension: null,
     needSorting: true,
 });
+

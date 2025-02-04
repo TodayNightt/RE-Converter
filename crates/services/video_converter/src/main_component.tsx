@@ -43,13 +43,14 @@ import { type Locale, locales } from "~/lib/types";
 import OutputExtensionComponent from "./components/output_extension";
 import { showToast, Toaster } from "./components/ui/toast";
 import { Badge } from "./components/ui/badge";
-import { setIoStore } from "./lib/io_store";
+import { type IoStore, ioStore, setIoStore } from "./lib/io_store";
 import { cancel, convert } from "./lib/websocket_messages";
 import { getLocaleFontClass } from "./lib/utils";
+import { lastSavedStore } from "./lib/ls_store";
 
 function MainComponent() {
   const ctx = useAppState();
-  const { t, locale, setLocale } = ctx;
+  const { t, locale, setLocale, config } = ctx;
   let ws!: WebSocket;
   const [needSorting, setNeedSorting] = createSignal<boolean>(true);
   const [progress, updateProgress] = createSignal<ProgressInfo[]>([]);
@@ -59,11 +60,18 @@ function MainComponent() {
     converting() ? ["output"] : ["io-folder", "advanced-settings"]
   );
 
-  const [stillDefaults, setStillDefaults] = createSignal<Array<boolean>>(
-    Array(10).fill(true)
-  );
+  const stillDefault = createMemo(() => {
+    const currentStore = { ...ioStore };
+    return Object.entries(currentStore).every(([key, value]) =>
+      Object.is(value, lastSavedStore[key as keyof IoStore])
+    );
+  });
 
-  const stillDefault = createMemo(() => stillDefaults().every((v) => v));
+  createEffect(() => {
+    console.log(stillDefault());
+    console.log("ioStore", ioStore);
+    console.log("lastSavedStore", lastSavedStore);
+  });
 
   // Create memo for font class
   const fontClass = createMemo(() => getLocaleFontClass(locale()));
@@ -105,6 +113,10 @@ function MainComponent() {
     });
   });
 
+  createEffect(() => {
+    console.log(lastSavedStore);
+  });
+
   onCleanup(() => {
     if (ws) {
       cancel(ws);
@@ -117,7 +129,7 @@ function MainComponent() {
   });
 
   return (
-    <Show when={ctx.config?.getConfig()}>
+    <Show when={config.isReady()()}>
       <main class={`container h-full ${fontClass()}`}>
         <div class="grid grid-rows-section-llm  grid-cols-3 h-full w-full">
           <nav class="flex justify-end items-center col-span-3 px-4">
@@ -171,7 +183,9 @@ function MainComponent() {
                 <AccordionContent>
                   <div class="grid grid-cols-3 p-2">
                     <FolderSelector
+                      redraw={config.isReady()}
                       valueSetter={setIoStore}
+                      defaultValueIden={"inputFolder"}
                       storeIdentifier={"inputFolder"}
                       label={t("inputFolder")}
                     />
@@ -179,6 +193,8 @@ function MainComponent() {
                       <FiChevronsRight class="size-40 animate-bounce" />
                     </div>
                     <FolderSelector
+                      redraw={config.isReady()}
+                      defaultValueIden={"outputFolder"}
                       valueSetter={setIoStore}
                       storeIdentifier={"outputFolder"}
                       label={t("outputFolder")}
@@ -214,6 +230,8 @@ function MainComponent() {
                         </TableCell>
                         <TableCell>
                           <OutputExtensionComponent
+                            redraw={config.isReady()}
+                            defaultValueIden={"outputExtension"}
                             valueSetter={setIoStore}
                             storeIdentifier={"outputExtension"}
                           />
@@ -225,6 +243,8 @@ function MainComponent() {
                         </TableCell>
                         <TableCell class="w-full" colSpan={3}>
                           <ResolutionComponent
+                            redraw={config.isReady()}
+                            defaultValueIden={"resolution"}
                             valueSetter={setIoStore}
                             storeIdentifier={"resolution"}
                           />
@@ -236,6 +256,8 @@ function MainComponent() {
                         </TableCell>
                         <TableCell class="w-full" colSpan={3}>
                           <VideoCodecComponent
+                            redraw={config.isReady()}
+                            defaultValueIden={"videoCodec"}
                             valueSetter={setIoStore}
                             storeIdentifier={"videoCodec"}
                           />
@@ -243,10 +265,12 @@ function MainComponent() {
                       </TableRow>
                       <TableRow>
                         <TableCell class="w-[10rem] h-[150px] flex flex-col gap-5 items-center justify-center">
-                          <Label class="text-lg">{t("video")}</Label>
+                          <Label class="text-lg">{t("videoBitrate")}</Label>
                         </TableCell>
                         <TableCell class="w-full" colSpan={3}>
                           <BitrateSetting
+                            redraw={config.isReady()}
+                            defaultValueIden={"videoBitrate"}
                             valueSetter={setIoStore}
                             storeIdentifier={"videoBitrate"}
                           />
@@ -258,6 +282,8 @@ function MainComponent() {
                         </TableCell>
                         <TableCell class="w-full" colSpan={3}>
                           <AudioCodecComponent
+                            redraw={config.isReady()}
+                            defaultValueIden={"audioCodec"}
                             valueSetter={setIoStore}
                             storeIdentifier={"audioCodec"}
                           />
@@ -269,6 +295,8 @@ function MainComponent() {
                         </TableCell>
                         <TableCell class="w-full" colSpan={3}>
                           <BitrateSetting
+                            redraw={config.isReady()}
+                            defaultValueIden={"audioBitrate"}
                             valueSetter={setIoStore}
                             storeIdentifier={"audioBitrate"}
                           />
@@ -280,12 +308,9 @@ function MainComponent() {
                         </TableCell>
                         <TableCell class="w-full" colSpan={3}>
                           <PictureFormatComponent
-                            stillDefault={stillDefaults}
                             defaultIndex={9}
-                            defaultValue={
-                              ctx.config?.getConfig()?.last_saved?.ffmpegOptions
-                                .pictureFormat
-                            }
+                            redraw={config.isReady()}
+                            defaultValueIden={"pictureFormat"}
                             valueSetter={setIoStore}
                             storeIdentifier={"pictureFormat"}
                           />

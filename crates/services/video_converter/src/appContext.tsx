@@ -5,12 +5,14 @@ import {
   type ParentComponent,
   createResource,
   type ParentProps,
+  createEffect,
 } from "solid-js";
 import * as i18n from "@solid-primitives/i18n";
 import type { Dict } from "./i18n/en";
 import ConfigSingleton from "./lib/config_singleton";
 import type { Locale, AppState, Dictionary } from "./lib/types";
 import { setLastSavedStore } from "./lib/ls_store";
+import { converterOptionsToIoStore } from "./lib/io_store";
 
 async function fetchDictionary(locale: Locale): Promise<Dictionary> {
   const dict: Dict = (await import(`./i18n/${locale}.ts`)).dict;
@@ -31,10 +33,15 @@ export const AppContextProvider: ParentComponent = (props: ParentProps) => {
 
   const t = i18n.translator(dict);
 
-  const lastSaved = config().getConfig()?.last_saved;
-  if (lastSaved !== undefined) {
-    setLastSavedStore(lastSaved);
-  }
+  createEffect(() => {
+    if (config().isReady()()) {
+      const lastSaved = config().getConfig();
+      console.log(lastSaved);
+      if (lastSaved) {
+        setLastSavedStore(converterOptionsToIoStore(lastSaved));
+      }
+    }
+  });
 
   const state: AppState = {
     get locale() {

@@ -1,18 +1,20 @@
 import { invoke } from "@tauri-apps/api/core";
-import { createResource } from "solid-js";
-import type { Config } from "./types-backend";
+import type { ConverterOptions } from "./types-backend";
+import { type Accessor, createSignal, type Setter } from "solid-js";
 
 class ConfigSingleton {
     private static instance: ConfigSingleton;
-    private configResource: ReturnType<typeof createResource<Config>>;
+    private ready: [Accessor<boolean>, Setter<boolean>];
+    private config: ConverterOptions | undefined;
+
 
     private constructor() {
-        this.configResource = createResource<Config>(this.loadConfig.bind(this));
+        this.ready = createSignal(false);
+        this.loadConfig().then(() => { this.ready[1](true) });
     }
 
-    private async loadConfig(): Promise<Config> {
-        const config = await invoke<Config>("get_last_saved");
-        return config;
+    private async loadConfig() {
+        this.config = await invoke<ConverterOptions>("get_last_saved");
     }
 
     public static getInstance(): ConfigSingleton {
@@ -22,12 +24,23 @@ class ConfigSingleton {
         return ConfigSingleton.instance;
     }
 
-    public getConfig(): Config | undefined {
-        return this.configResource[0]();
+    public isReady(): Accessor<boolean> {
+        return this.ready[0];
+    }
+
+    // Transform it to a Config when it's ready
+    public getConfig(): ConverterOptions | null {
+        if (!this.ready) {
+            return null;
+        }
+        return this.config as ConverterOptions;
     }
 
     public updateConfig() {
-        this.configResource[1].refetch();
+        this.ready[1](false);
+        this.loadConfig().then(() => {
+            this.ready[1](true);
+        });
     }
 }
 

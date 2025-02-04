@@ -1,21 +1,33 @@
-import { createSignal } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { TextField, TextFieldInput } from "./ui/text-field";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAppState } from "~/appContext";
 import type { DefaultValueProps, ValueStoreSetter } from "~/lib/types";
+import { lastSavedStore } from "~/lib/ls_store";
 
-type FolderSelectorProps = DefaultValueProps<string> &
+type FolderSelectorProps = DefaultValueProps &
   ValueStoreSetter & {
     label: string;
   };
 
 function FolderSelector(props: FolderSelectorProps) {
   const { t } = useAppState();
-  const [value, setValue] = createSignal<string>(
-    props.defaultValue ? props.defaultValue : ""
-  );
+  const [value, setValue] = createSignal<string>("");
+
+  createEffect(() => {
+    if (props.redraw()) {
+      setValue((lastSavedStore[props.defaultValueIden] as string) ?? "");
+    }
+  });
+
+  createEffect(() => {
+    if (value()) {
+      props.valueSetter(props.storeIdentifier, value);
+    }
+  });
+
   const valueSetter = async () => {
     try {
       const selectedFolder = await open({
@@ -24,7 +36,6 @@ function FolderSelector(props: FolderSelectorProps) {
 
       if (selectedFolder) {
         setValue(selectedFolder as string);
-        props.valueSetter(props.storeIdentifier, value());
       }
     } catch (error) {
       console.error("Folder selection failed:", error);

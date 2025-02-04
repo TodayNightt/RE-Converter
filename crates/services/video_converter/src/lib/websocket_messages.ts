@@ -58,8 +58,8 @@ export function convert(ws: WebSocket) {
     }
 
     const options: ConverterOptions = {
-        inputDir: ioStore.inputFolder,
-        outputDir: ioStore.outputFolder,
+        inputDir: ioStore.inputFolder ?? "",
+        outputDir: ioStore.outputFolder ?? "",
         needSorting: ioStore.needSorting,
         ffmpegOptions: {
             resolution: r,
@@ -72,13 +72,6 @@ export function convert(ws: WebSocket) {
         },
     };
 
-    console.log(
-        options,
-        typeof options.ffmpegOptions.audioBitrate.content,
-        typeof ioStore.audioBitrate
-    );
-
-    console.log(JSON.stringify(options));
 
     const message: Message = {
         method: "convert",

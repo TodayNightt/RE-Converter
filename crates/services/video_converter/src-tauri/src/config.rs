@@ -13,9 +13,9 @@ use typeshare::typeshare;
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 #[typeshare]
 pub struct Config {
-    last_saved: Option<ConverterOptions>,
+    pub last_saved: Option<ConverterOptions>,
     #[serde(skip)]
-    saved_path: PathBuf,
+    pub saved_path: PathBuf,
 }
 
 impl Config {

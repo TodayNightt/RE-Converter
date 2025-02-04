@@ -5,24 +5,17 @@ import {
   RadioGroupItemLabel,
 } from "./ui/radio-group";
 import SwitchToggle from "./switchToggle";
-import { type ArgsType, VideoCodec } from "~/lib/types-backend";
+import { VideoCodec } from "~/lib/types-backend";
 import type { DefaultValueProps, ValueStoreSetter } from "~/lib/types";
+import { getValueFromLastSaved } from "~/lib/utils";
 
-type VideoCodecProps = DefaultValueProps<ArgsType<VideoCodec>> &
-  ValueStoreSetter;
+type VideoCodecProps = DefaultValueProps & ValueStoreSetter;
 
 function VideoCodecComponent(props: VideoCodecProps) {
   const codecs = Object.values(VideoCodec).map(mapValue);
-  const [switcher, setSwitcher] = createSignal<boolean>(
-    !!(props.defaultValue && props.defaultValue.type === "custom")
-  );
+  const [switcher, setSwitcher] = createSignal<boolean>(false);
 
-  const defaultValue = props.defaultValue;
-  const videoCodec =
-    defaultValue && defaultValue.type === "custom"
-      ? defaultValue.content
-      : null;
-  const [value, setValue] = createSignal<VideoCodec | null>(videoCodec);
+  const [value, setValue] = createSignal<VideoCodec | null>(null);
 
   createEffect(() => {
     if (!switcher()) {
@@ -31,6 +24,18 @@ function VideoCodecComponent(props: VideoCodecProps) {
     }
     props.valueSetter(props.storeIdentifier, reverseMapValue(value()));
   });
+
+  createEffect(() => {
+    if (props.redraw()) {
+      const val = getValueFromLastSaved<VideoCodec>(props.defaultValueIden);
+
+      if (val) {
+        setSwitcher(true);
+        setValue(val);
+      }
+    }
+  });
+
   return (
     <SwitchToggle
       reactiveSwitch={[switcher, setSwitcher]}

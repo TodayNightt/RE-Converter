@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import type { Setter } from "solid-js";
 import { twMerge } from "tailwind-merge"
+import { lastSavedStore } from "./ls_store";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -21,6 +22,18 @@ export function updateStillDefault<T>(
       return newPrev;
     });
   }
+}
+
+export function getValueFromLastSaved<ValKind>(defaultValueIden: keyof typeof lastSavedStore): ValKind | null {
+  const val = lastSavedStore[
+    defaultValueIden
+  ];
+
+  if (val !== null) {
+    return val as ValKind;
+  }
+
+  return null;
 }
 
 export function getLocaleFontClass(locale: string): string {

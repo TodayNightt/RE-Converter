@@ -1,37 +1,43 @@
 import { createEffect, createSignal, For } from "solid-js";
 import SwitchToggle from "./switchToggle";
-import { type ArgsType, Resolution } from "~/lib/types-backend";
+import { Resolution } from "~/lib/types-backend";
 import {
   RadioGroup,
   RadioGroupItem,
   RadioGroupItemLabel,
 } from "./ui/radio-group";
 import type { DefaultValueProps, ValueStoreSetter } from "~/lib/types";
+import { getValueFromLastSaved } from "~/lib/utils";
 
-type ResolutionProps = DefaultValueProps<ArgsType<Resolution>> &
-  ValueStoreSetter;
+type ResolutionProps = DefaultValueProps & ValueStoreSetter;
 
 function ResolutionComponent(props: ResolutionProps) {
   const resolutions = Object.values(Resolution).map(mapValue);
-  const [switcher, setSwitcher] = createSignal<boolean>(
-    !!(props.defaultValue && props.defaultValue.type === "custom")
-  );
+  const [switcher, setSwitcher] = createSignal<boolean>(false);
 
-  const defaultValue = props.defaultValue;
-  const resolution =
-    defaultValue && defaultValue.type === "custom"
-      ? defaultValue.content
-      : null;
-  const [value, setValue] = createSignal<Resolution | null>(resolution);
+  const [value, setValue] = createSignal<Resolution | null>(null);
 
   createEffect(() => {
     if (!switcher()) {
       props.valueSetter(props.storeIdentifier, null);
       setValue(null);
+      return;
     }
 
     props.valueSetter(props.storeIdentifier, reverseMapValue(value()));
   });
+
+  createEffect(() => {
+    if (props.redraw()) {
+      const val = getValueFromLastSaved<Resolution>(props.defaultValueIden);
+
+      if (val) {
+        setValue(val);
+        setSwitcher(true);
+      }
+    }
+  });
+
   return (
     <SwitchToggle
       reactiveSwitch={[switcher, setSwitcher]}
@@ -40,7 +46,7 @@ function ResolutionComponent(props: ResolutionProps) {
       <RadioGroup
         class="flex gap-10"
         onChange={setValue}
-        value={value()?.toString()}
+        value={mapValue(value() ?? Resolution.R1080P)}
       >
         <For each={resolutions}>
           {(item) => (

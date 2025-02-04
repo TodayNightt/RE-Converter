@@ -5,33 +5,19 @@ import {
   RadioGroupItem,
   RadioGroupItemLabel,
 } from "./ui/radio-group";
-import { type ArgsType, AudioCodec } from "~/lib/types-backend";
+import { AudioCodec } from "~/lib/types-backend";
 import type { DefaultValueProps, ValueStoreSetter } from "~/lib/types";
-import { updateStillDefault } from "~/lib/utils";
+import { getValueFromLastSaved } from "~/lib/utils";
 
-type AudioCodecProps = DefaultValueProps<ArgsType<AudioCodec>> &
-  ValueStoreSetter;
+type AudioCodecProps = DefaultValueProps & ValueStoreSetter;
 
 function AudioCodecComponent(props: AudioCodecProps) {
   const codecs = Object.values(AudioCodec);
-  const [switcher, setSwitcher] = createSignal<boolean>(
-    !!(props.defaultValue && props.defaultValue.type === "custom")
-  );
+  const [switcher, setSwitcher] = createSignal<boolean>(false);
 
-  const defaultValue = props.defaultValue;
-  const audioCodec =
-    defaultValue && defaultValue.type === "custom"
-      ? defaultValue.content
-      : null;
-  const [value, setValue] = createSignal<AudioCodec | null>(audioCodec);
+  const [value, setValue] = createSignal<AudioCodec | null>(null);
 
   createEffect(() => {
-    updateStillDefault(
-      props.stillDefault,
-      props.defaultIndex,
-      value(),
-      defaultValue?.content ?? null
-    );
     if (!switcher()) {
       props.valueSetter(props.storeIdentifier, null);
       setValue(null);
@@ -39,11 +25,21 @@ function AudioCodecComponent(props: AudioCodecProps) {
     props.valueSetter(props.storeIdentifier, value());
   });
 
+  createEffect(() => {
+    if (props.redraw()) {
+      const val = getValueFromLastSaved<AudioCodec>(props.defaultValueIden);
+      if (val) {
+        setSwitcher(true);
+        setValue(val);
+      }
+    }
+  });
+
   return (
     <SwitchToggle reactiveSwitch={[switcher, setSwitcher]}>
       <RadioGroup
         class="flex"
-        defaultValue={defaultValue ? defaultValue.toString() : undefined}
+        defaultValue={value()?.toString()}
         onChange={setValue}
         value={value()?.toString()}
       >

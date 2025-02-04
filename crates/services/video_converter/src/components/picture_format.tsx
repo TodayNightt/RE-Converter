@@ -1,5 +1,5 @@
-import { createEffect, createMemo, createSignal, For } from "solid-js";
-import { type ArgsType, PictureFormat } from "~/lib/types-backend";
+import { createEffect, createSignal, For } from "solid-js";
+import { PictureFormat } from "~/lib/types-backend";
 import SwitchToggle from "./switchToggle";
 import {
   RadioGroup,
@@ -7,32 +7,39 @@ import {
   RadioGroupItemLabel,
 } from "./ui/radio-group";
 import type { DefaultValueProps, ValueStoreSetter } from "~/lib/types";
+import { getValueFromLastSaved } from "~/lib/utils";
 
-type PictureFormatProps = DefaultValueProps<ArgsType<PictureFormat>> &
-  ValueStoreSetter;
-function PictureFormatComponent(props: PictureFormatProps) {
+type PictureFormatProps = DefaultValueProps & ValueStoreSetter;
+function PictureFormatComponent(props: PictureFormatProps) {  
   const pictureFormats = Object.values(PictureFormat).map(mapValue);
-  const [switcher, setSwitcher] = createSignal<boolean>(
-    !!(props.defaultValue && props.defaultValue.type === "custom")
-  );
-  const defaultValue = createMemo(() => {
-    return props.defaultValue;
-  });
+  const [switcher, setSwitcher] = createSignal<boolean>(false);
 
-  const content =
-    defaultValue && defaultValue()?.type === "custom"
-      ? defaultValue()?.content
-      : null;
-  const [value, setValue] = createSignal<PictureFormat | null>(content ?? null);
+  const [value, setValue] = createSignal<PictureFormat | null>(null);
 
   createEffect(() => {
     if (!switcher()) {
       props.valueSetter(props.storeIdentifier, null);
       setValue(null);
+      return;
     }
+
+    console.log("picture format", value());
 
     props.valueSetter(props.storeIdentifier, reverseMapValue(value()));
   });
+
+  createEffect(() => {
+    if (props.redraw()) {
+      const val = getValueFromLastSaved<PictureFormat>(props.defaultValueIden);
+
+      if (val) {
+        console.log("picture format redraw");
+        setValue(val);
+        setSwitcher(true);
+      }
+    }
+  });
+
   return (
     <SwitchToggle
       reactiveSwitch={[switcher, setSwitcher]}
@@ -41,9 +48,7 @@ function PictureFormatComponent(props: PictureFormatProps) {
       <RadioGroup
         class="flex gap-10"
         onChange={setValue}
-        defaultValue={mapValue(
-          defaultValue()?.content ?? PictureFormat.Pf4208B
-        )}
+        defaultValue={mapValue(PictureFormat.Pf4208B)}
         value={mapValue(value() ?? PictureFormat.Pf4208B)}
       >
         <For each={pictureFormats}>

@@ -8,9 +8,9 @@ import {
 } from "./ui/select";
 import { OutputExtension } from "~/lib/types-backend";
 import type { DefaultValueProps, ValueStoreSetter } from "~/lib/types";
+import { getValueFromLastSaved } from "~/lib/utils";
 
-type OutputExtensionProps = DefaultValueProps<OutputExtension> &
-  ValueStoreSetter;
+type OutputExtensionProps = DefaultValueProps & ValueStoreSetter;
 
 function OutputExtensionComponent(props: OutputExtensionProps) {
   const extensions = Object.values(OutputExtension).map(mapValue);
@@ -21,11 +21,21 @@ function OutputExtensionComponent(props: OutputExtensionProps) {
   createEffect(() => {
     props.valueSetter(props.storeIdentifier, reverseMapValue(value()));
   });
+
+  createEffect(() => {
+    if (props.redraw()) {
+      const val = getValueFromLastSaved<OutputExtension>(
+        props.defaultValueIden
+      );
+
+      if (val) {
+        setValue(mapValue(val));
+      }
+    }
+  });
   return (
     <Select
-      defaultValue={mapValue(
-        props.defaultValue ? props.defaultValue : OutputExtension.Default
-      )}
+      defaultValue={mapValue(OutputExtension.Default)}
       options={extensions}
       value={value()}
       onChange={setValue}

@@ -7,10 +7,7 @@ use std::sync::Arc;
 
 use config::Config;
 pub use error::{Error, Result};
-use lib_core::{
-    ArgsType, AudioCodec, ConverterOptions, FfmpegOptions, HwAccel, OutputExtension, PictureFormat,
-    Resolution, VideoCodec,
-};
+use lib_core::ConverterOptions;
 
 use tauri::{Emitter, Listener, Manager};
 use tokio::sync::RwLock;
@@ -323,21 +320,25 @@ fn get_last_saved(state: tauri::State<State>) -> Option<ConverterOptions> {
     //     }
     // }
 
-    Some(ConverterOptions {
-        input_dir: "input".into(),
-        output_dir: "output".into(),
-        need_sorting: false,
-        ffmpeg_options: FfmpegOptions {
-            resolution: ArgsType::Custom(Resolution::R720P),
-            hwaccel: Some(HwAccel::Cuda),
-            audio_codec: ArgsType::Custom(AudioCodec::Aac),
-            video_codec: ArgsType::Custom(VideoCodec::H264),
-            audio_bitrate: ArgsType::Custom(128),
-            video_bitrate: ArgsType::Custom(5000),
-            picture_format: ArgsType::Custom(PictureFormat::Pf42210B),
-            output_extension: OutputExtension::Mp4,
-        },
-    })
+    // Some(Config {
+    //     last_saved: Some(ConverterOptions {
+    //         input_dir: "input".into(),
+    //         output_dir: "output".into(),
+    //         need_sorting: false,
+    //         ffmpeg_options: FfmpegOptions {
+    //             resolution: ArgsType::Custom(Resolution::R720P),
+    //             hwaccel: Some(HwAccel::Cuda),
+    //             audio_codec: ArgsType::Custom(AudioCodec::Aac),
+    //             video_codec: ArgsType::Custom(VideoCodec::H264),
+    //             audio_bitrate: ArgsType::Custom(128),
+    //             video_bitrate: ArgsType::Custom(5000),
+    //             picture_format: ArgsType::Custom(PictureFormat::Pf42210B),
+    //             output_extension: OutputExtension::Mp4,
+    //         },
+    //     }),
+    //     saved_path: "config.json".into(),
+    // })
+    state.config.last_saved().clone()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
