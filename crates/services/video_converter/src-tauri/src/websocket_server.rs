@@ -130,19 +130,24 @@ async fn handle_message(
                         let options_clone = Arc::clone(&options);
                         let converter_task = tokio::spawn(async move {
                             let mut converter_guard = converter_clone.lock().await;
-                            match converter_guard.start_conversion() {
+                            match converter_guard.start_conversion().await {
                                 Ok(_) => {
                                     let _ = stc
                                         .send(WSMessage::text(
                                             serde_json::to_string(&Message::Finished).unwrap(),
                                         ))
                                         .await;
+
+                                    // Send the stop signal to the progress monitor
+                                    let mut progress_guard = monitor_clone.lock().await;
+                                    progress_guard.stop().await;
+
                                     {
                                         let mut new_config =
                                             { state_clone.read().await.config.clone() };
-                                        new_config
-                                            .update_last_saved(options_clone.as_ref().clone());
-                                        new_config
+                                        let _ = new_config.update_last_saved_and_save(
+                                            options_clone.as_ref().clone(),
+                                        );
                                     };
                                 }
                                 Err(e) => {
@@ -197,14 +202,6 @@ async fn handle_message(
                         if let Err(e) = converter_result {
                             eprintln!("Converter task error: {:?}", e);
                         }
-
-                        let sender_tx_clone = Arc::clone(&sender_tx);
-                        sender_tx_clone
-                            .send(WSMessage::text(
-                                serde_json::to_string(&Message::Finished).unwrap(),
-                            ))
-                            .await
-                            .unwrap();
                     }
                     Message::Cancel => {
                         // Send the cancellation signal

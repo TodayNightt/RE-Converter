@@ -8,7 +8,10 @@ use std::{
 
 pub use lib_sorter::{Bucket, Sinker};
 // use no_deadlocks::prelude::RwLock;
-use tokio::sync::{broadcast, RwLock};
+use tokio::{
+    sync::{broadcast, RwLock},
+    task::JoinSet,
+};
 
 use crate::{
     copiee::copy_files, exec::exec_batch_ffmpeg, state::State, Error, ProgressTracker, Result,
@@ -100,7 +103,7 @@ impl Converter {
         Ok(stop_tx)
     }
 
-    pub fn start_conversion(&mut self) -> Result<()> {
+    pub async fn start_conversion(&mut self) -> Result<()> {
         // Ensure that a task is available before proceeding
         if !matches!(self.state, State::TaskAvailable) {
             return Err(Error::ConverterHasNoTaskAvailable);
@@ -114,6 +117,7 @@ impl Converter {
             .cloned()
             .collect();
 
+        let mut join_set = JoinSet::new();
         for (name, tracker, bucket) in trackers_to_update.into_iter() {
             let stop_signal = self.stop_signal.clone().unwrap();
             let semaphore = Arc::new(tokio::sync::Semaphore::new(10));
@@ -121,7 +125,7 @@ impl Converter {
             let tracker = Arc::clone(&tracker);
             let name = name.clone();
 
-            tokio::spawn(Converter::spawn_conversion_task(
+            join_set.spawn(Converter::spawn_conversion_task(
                 name,
                 tracker,
                 bucket,
@@ -130,6 +134,9 @@ impl Converter {
                 semaphore.clone(),
             ));
         }
+
+        // Wait for all tasks to complete
+        join_set.join_all().await;
 
         // Reset internal state after spawning all tasks
         // self.trackers_to_update = None;
@@ -261,8 +268,9 @@ impl Converter {
     ) -> Result<()> {
         // Create the output directory
         let mut output = options.output_dir.clone();
+        let mut name = name.to_owned();
+        name.push_str(" 原");
         output.push(name);
-        output.push(" 原");
 
         if let Err(e) = create_directory_with_permissions(&output) {
             eprintln!("Failed to create directory {:?}: {:?}", output, e);

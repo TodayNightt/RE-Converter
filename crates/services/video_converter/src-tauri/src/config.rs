@@ -66,4 +66,9 @@ impl Config {
     pub fn update_last_saved(&mut self, options: ConverterOptions) {
         self.last_saved = Some(options)
     }
+
+    pub fn update_last_saved_and_save(&mut self, options: ConverterOptions) -> Result<()> {
+        self.update_last_saved(options);
+        self.save_config()
+    }
 }
