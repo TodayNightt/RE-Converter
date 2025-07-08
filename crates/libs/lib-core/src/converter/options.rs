@@ -167,6 +167,12 @@ pub struct FfmpegOptions {
 }
 
 impl FfmpegOptions {
+
+    pub fn new (resolution: ArgsType<Resolution>,hwaccel: Option<HwAccel>, audio_codec: ArgsType<AudioCodec>,video_codec: ArgsType<VideoCodec>,audio_bitrate: ArgsType<u32>,video_bitrate : ArgsType<u32>, picture_format: ArgsType<PictureFormat>, output_extension: OutputExtension)-> Self{
+        FfmpegOptions{
+            resolution,hwaccel,audio_codec,video_codec,audio_bitrate,video_bitrate,picture_format,output_extension
+        }
+    }
     pub fn build(self, input: PathBuf, output: PathBuf) -> Vec<String> {
         let mut args = Vec::new();
 
@@ -190,7 +196,7 @@ impl FfmpegOptions {
                             Arg::new("scale")
                                 .without_dash()
                                 .value(self.resolution.to_string())
-                                .with_value_spacer("=   ")
+                                .with_value_spacer("= ")
                                 .build()
                                 .join(""),
                         )
@@ -222,7 +228,7 @@ impl FfmpegOptions {
                 args.extend(Arg::new("c:v").value(self.video_codec.to_string()).build());
             }
             (_, ArgsType::Custom(bitrate)) => {
-                args.extend(Arg::new("b:v").value(bitrate.to_string() + "k").build());
+                args.extend(Arg::new("b:a").value(bitrate.to_string() + "k").build());
             }
             (ArgsType::Custom(codec), _) => {
                 args.extend(Arg::new("c:v").value(codec.to_string()).build());
@@ -263,6 +269,14 @@ pub struct ConverterOptions {
     pub ffmpeg_options: FfmpegOptions,
 }
 
+impl ConverterOptions{
+    pub fn new(input_dir : PathBuf, output_dir : PathBuf, need_sorting: bool, ffmpeg_options: FfmpegOptions) -> ConverterOptions {
+        ConverterOptions{
+            input_dir,output_dir,need_sorting,ffmpeg_options
+        }
+    }
+}
+
 impl Display for ArgsType<AudioCodec> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -301,7 +315,7 @@ impl Display for ArgsType<Resolution> {
 #[cfg(test)]
 mod test {
     use std::{path::PathBuf, str::FromStr};
-
+    use crate::{ArgsType, AudioCodec, OutputExtension, VideoCodec};
     use crate::converter::options::Resolution;
 
     use super::{FfmpegOptions, HwAccel};
@@ -338,6 +352,33 @@ mod test {
                 "-c:v",
                 "h264_nvenc",
                 "-c:v",
+                "flac",
+                "/s/video/a.mkv"
+            ]
+        )
+    }
+
+    #[test]
+    fn test_arg(){
+        let options = FfmpegOptions::new(
+            ArgsType::MatchSource,None, ArgsType::Custom(AudioCodec::Flac), ArgsType::Custom(VideoCodec::H264QSV), ArgsType::MatchSource,ArgsType::Custom(10000),
+            ArgsType::MatchSource,OutputExtension::Mkv);
+
+        let args = options.build(
+            PathBuf::from_str("/s/video/a.mp4").unwrap(),
+            PathBuf::from_str("/s/video/a.mkv").unwrap(),
+        );
+
+        assert_eq!(
+            args,
+            vec![
+                "-i",
+                "/s/video/a.mp4",
+                "-c:v",
+                "h264_qsv",
+                "-b:v",
+                "10000k",
+                "-c:a",
                 "flac",
                 "/s/video/a.mkv"
             ]

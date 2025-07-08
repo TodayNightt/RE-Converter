@@ -5,5 +5,14 @@ members = [
     "crates/libs/lib-sorter",
     "crates/libs/lib-utils",
     "crates/services/video_converter/src-tauri",
-    # "crates/services/video_converter_cli",
+    "crates/services/video_converter_cli", "crates/services/video_converter_iced",
 ]
+
+[workspace.dependencies]
+lib-core = { path = "crates/libs/lib-core" }
+lib-utils = { path = "crates/libs/lib-utils" }
+lib-sorter = { path = "crates/libs/lib-sorter" }
+
+tokio = { version = "1.46.1", features = ["full"] }
+rust-embed = { version = "8.7.2", features = ["debug-embed", "interpolate-folder-path"] }
+chrono = "0.4"

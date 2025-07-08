@@ -1,12 +1,8 @@
-use std::collections::HashMap;
-use std::ffi::OsStr;
-use std::fs;
-use std::{fs::Metadata, path::PathBuf};
+use std::{collections::HashMap, ffi::OsStr, fs, fs::Metadata, path::PathBuf};
 
 use chrono::Local;
 
-use super::bucket::Bucket;
-use super::Result;
+use super::{bucket::Bucket, Result};
 
 pub type Buckets = HashMap<String, Bucket>;
 
@@ -14,7 +10,7 @@ pub struct Sinker;
 
 impl Sinker {
     pub fn sink(files: Vec<PathBuf>, need_sorting: bool) -> Result<Buckets> {
-        let mut map = HashMap::with_capacity(10);
+        let mut map = HashMap::with_capacity(30);
         let current_time = Local::now();
         for file in files.into_iter() {
             let title = if need_sorting {

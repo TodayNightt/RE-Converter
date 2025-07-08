@@ -1,100 +1,131 @@
-use std::sync::RwLock;
+use std::sync::atomic::{AtomicU32, Ordering};
 
-// use no_deadlocks::prelude::RwLock;
-use serde::{Deserialize, Serialize};
-use typeshare::typeshare;
+use crate::progress::{JobInfo, Progress};
 
 #[derive(Debug, Clone, Copy)]
-enum CurrentJob {
+pub enum Stage {
     Xml,
     Video,
 }
 
 #[derive(Debug)]
 pub struct ProgressTracker {
-    folder_name: String,
-    file_name: RwLock<String>,
-    job: RwLock<CurrentJob>,
-    current_xml: RwLock<u32>,
-    total_xml: u32,
-    current_video: RwLock<u32>,
-    total_video: u32,
+    job_info: JobInfo,
+    current_file: String,
+    current_xml: AtomicU32,
+    current_video: AtomicU32,
+    status: JobStatus,
+    stage: Stage,
+    errored: Vec<ErrorInfo>,
 }
 
-#[typeshare]
-#[derive(Debug, Serialize, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProgressInfo {
-    folder_name: String,
-    // Note : This can change into a enum
-    status: String,
-    file_name: String,
-    current_progress: u32,
-    total_progress: u32,
+#[derive(Debug)]
+struct ErrorInfo {
+    _file: String,
+    _cause: String,
+}
+
+#[derive(Debug)]
+enum JobStatus {
+    Starting,
+    Pending,
+    Done,
 }
 
 impl ProgressTracker {
-    pub fn new(total_xml: u32, total_video: u32, folder_name: impl Into<String>) -> Self {
+    pub fn new(job_info: JobInfo) -> Self {
+        let capacity = job_info.total_xml() + job_info.total_video();
         ProgressTracker {
-            folder_name: folder_name.into(),
-            file_name: RwLock::default(),
-            job: RwLock::new(CurrentJob::Xml),
-            current_xml: RwLock::new(0),
-            total_xml,
-            current_video: RwLock::new(0),
-            total_video,
+            job_info,
+            status: JobStatus::Pending,
+            errored: Vec::with_capacity(capacity as usize),
+            current_xml: AtomicU32::new(0),
+            current_video: AtomicU32::new(0),
+            stage: Stage::Xml,
+            current_file: String::default(),
         }
     }
+    pub fn progress(&self) -> Progress {
+        let (count, total) = match self.stage {
+            Stage::Xml => (
+                self.current_xml.load(Ordering::SeqCst),
+                self.job_info.total_xml(),
+            ),
+            Stage::Video => (
+                self.current_video.load(Ordering::SeqCst),
+                self.job_info.total_video(),
+            ),
+        };
+        Progress::new(
+            self.job_info.folder_name(),
+            self.current_file.to_owned(),
+            count as u8,
+            self.stage.to_owned(),
+            self.errored.len() as u8,
+            total as u8,
+            matches!(self.status, JobStatus::Done),
+        )
+    }
 
-    pub fn progress(&self) -> ProgressInfo {
-        match *self.job.read().unwrap() {
-            CurrentJob::Xml => ProgressInfo {
-                folder_name: self.folder_name.clone(),
-                status: "Copying XML files to destination".to_string(),
-                file_name: self.file_name.read().unwrap().to_string(),
-                current_progress: *self.current_xml.read().unwrap(),
-                total_progress: self.total_xml,
-            },
-            CurrentJob::Video => ProgressInfo {
-                folder_name: self.folder_name.clone(),
-                status: "Transcoding Video files and copy it to destination".to_string(),
-                file_name: self.file_name.read().unwrap().to_string(),
-                current_progress: *self.current_video.read().unwrap(),
-                total_progress: self.total_video,
-            },
+    fn update(&mut self, update_request: Stage, working_file: String) -> Result<(), String> {
+        if matches!(self.status, JobStatus::Pending) {
+            self.status = JobStatus::Starting;
         }
-    }
-
-    pub fn set_job_xml(&self) {
-        *self.job.write().unwrap() = CurrentJob::Xml;
-    }
-
-    pub fn set_job_video(&self) {
-        *self.job.write().unwrap() = CurrentJob::Video;
-    }
-
-    pub fn complete_one(&self, next: impl Into<String>) {
-        *self.file_name.write().unwrap() = next.into();
-        match *self.job.read().unwrap() {
-            CurrentJob::Xml => *self.current_xml.write().unwrap() += 1,
-            CurrentJob::Video => *self.current_video.write().unwrap() += 1,
+        if self
+            .current_video
+            .load(Ordering::SeqCst)
+            .eq(&self.job_info.total_video())
+            && self
+                .current_xml
+                .load(Ordering::SeqCst)
+                .eq(&self.job_info.total_xml())
+        {
+            self.status = JobStatus::Done;
         }
-    }
 
-    pub fn check_completed(&self) -> bool {
-        let j = *self.job.read().unwrap();
-        match j {
-            CurrentJob::Xml => {
-                if *self.current_xml.read().unwrap() == self.total_xml {
-                    *self.job.write().unwrap() = CurrentJob::Video;
+        match update_request {
+            Stage::Xml => {
+                if self
+                    .current_xml
+                    .load(Ordering::SeqCst)
+                    .eq(&self.job_info.total_xml())
+                {
+                    return Err("XML COPYING HAD BEEN DONE".to_string());
+                }
+                self.current_xml.fetch_add(1, Ordering::Relaxed);
+                if self
+                    .current_xml
+                    .load(Ordering::SeqCst)
+                    .eq(&self.job_info.total_xml())
+                {
+                    self.stage = Stage::Video;
                 }
             }
-            CurrentJob::Video => {
-                if *self.current_video.read().unwrap() == self.total_video {
-                    return true;
+            Stage::Video => {
+                if self
+                    .current_video
+                    .load(Ordering::Relaxed)
+                    .eq(&self.job_info.total_video())
+                {
+                    return Err("The things had been Done".to_string());
                 }
+                self.current_video.fetch_add(1, Ordering::SeqCst);
             }
         }
-        false
+
+        self.current_file = working_file;
+
+        Ok(())
+    }
+
+    pub fn update_xml(&mut self, working_file: String) -> Result<(), String> {
+        self.update(Stage::Xml, working_file)
+    }
+    pub fn update_video(&mut self, working_file: String) -> Result<(), String> {
+        self.update(Stage::Video, working_file)
+    }
+
+    pub fn set_done(&mut self) {
+        self.status = JobStatus::Done;
     }
 }

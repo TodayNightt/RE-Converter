@@ -7,9 +7,9 @@ pub struct Arg<F, V, S> {
     value_double_quote: bool,
     value: Option<String>,
     value_spacer: Option<String>,
-    flag_shadow: std::marker::PhantomData<F>,
-    value_shadow: std::marker::PhantomData<V>,
-    spacer_shadow: std::marker::PhantomData<S>,
+    flag_shadow: PhantomData<F>,
+    value_shadow: PhantomData<V>,
+    spacer_shadow: PhantomData<S>,
 }
 pub struct NoFlag;
 pub struct WithValue;

@@ -4,6 +4,6 @@ mod sinker;
 
 pub use error::{Error, Result};
 
-pub use sinker::Sinker;
+pub use sinker::{Buckets, Sinker};
 
 pub use bucket::Bucket;

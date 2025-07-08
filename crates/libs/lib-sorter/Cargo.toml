@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-lib-utils = { path = "../lib-utils" }
+lib-utils = { workspace = true }
 
-chrono = "0.4"
+chrono = { workspace = true }
+

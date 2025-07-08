@@ -1,2 +1,7 @@
 /target
-crates/services/video_converter_cli/*
+
+.gitignore
+binaries
+iced
+
+.idea

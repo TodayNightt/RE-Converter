@@ -2,14 +2,13 @@ mod converter;
 mod copiee;
 mod exec;
 mod progress;
-mod state;
 
 pub use converter::{
     ArgsType, AudioCodec, Converter, ConverterOptions, FfmpegOptions, HwAccel, OutputExtension,
     PictureFormat, Resolution, VideoCodec,
 };
 pub use error::{Error, Result};
-pub use progress::{ProgressInfo, ProgressMonitor, ProgressTracker};
+pub use progress::{Progress, ProgressMonitor, ProgressSystem, Stage};
 
 mod error {
     use std::fmt::Display;

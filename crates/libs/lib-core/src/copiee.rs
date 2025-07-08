@@ -1,19 +1,33 @@
+use crate::{Error, ProgressSystem, Result, Stage};
 use std::{fs::File, io, path::PathBuf, sync::Arc};
+use tokio::sync::RwLock;
 
-use crate::{Error, ProgressTracker, Result};
-
-pub(crate) fn copy_files(
+pub(crate) async fn copy_files(
     files: Vec<PathBuf>,
     des: PathBuf,
-    progress_tracker: Option<Arc<ProgressTracker>>,
+    folder_name: String,
+    tracker: Option<Arc<RwLock<ProgressSystem>>>,
 ) -> Result<()> {
     for file in files {
-        {
-            if let Some(ref progress_tracker) = progress_tracker {
-                progress_tracker.complete_one(file.to_str().unwrap());
-            }
-        }
+        let tracker = tracker.clone();
         copy_file(&file, des.clone())?;
+        if let Some(tracker) = tracker {
+            tracker
+                .read()
+                .await
+                .update_progress(
+                    folder_name.clone(),
+                    Stage::Xml,
+                    file.file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_string()
+                        .to_lowercase(),
+                )
+                .await
+                .unwrap();
+        }
     }
     Ok(())
 }

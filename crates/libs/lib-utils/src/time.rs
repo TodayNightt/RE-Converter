@@ -1,6 +1,21 @@
 use std::fmt::Display;
 
-use chrono::{Datelike, Local, Timelike, Weekday};
+use chrono::{Datelike, Local, NaiveTime, Timelike, Weekday};
+
+const SESSION_A: TimeRange = TimeRange{
+    start : NaiveTime::from_hms_opt(7, 30, 0).unwrap(),
+    end : NaiveTime::from_hms_opt(11, 30, 1).unwrap(),
+};
+
+const SESSION_B: TimeRange = TimeRange{
+    start : NaiveTime::from_hms_opt(12, 30, 0).unwrap(),
+    end : NaiveTime::from_hms_opt(16, 30, 1).unwrap(),
+};
+
+const SESSION_C: TimeRange = TimeRange{
+    start : NaiveTime::from_hms_opt(17, 0, 0).unwrap(),
+    end : NaiveTime::from_hms_opt(20, 30, 1).unwrap(),
+};
 
 struct Date {
     year: i32,
@@ -37,12 +52,15 @@ impl From<(i32, u32, u32, Weekday)> for Date {
 
 struct Time {
     hour: u32,
-    _min: u32,
+    min: u32,
 }
 
 impl Time {
     fn new(hour: u32, min: u32) -> Self {
-        Self { hour, _min: min }
+        Self { hour, min }
+    }
+    pub fn naive_time(&self) -> Option<NaiveTime> {
+        NaiveTime::from_hms_opt(self.hour, self.min, 0)
     }
 }
 
@@ -50,6 +68,24 @@ impl From<(u32, u32)> for Time {
     fn from(value: (u32, u32)) -> Self {
         Self::new(value.0, value.1)
     }
+}
+
+struct TimeRange{
+    start: NaiveTime,
+    end : NaiveTime,
+}
+
+impl TimeRange {
+    pub fn contains(&self, time: &NaiveTime) -> bool {
+        if self.start <= self.end {
+            // Normal range (e.g., 9:00 - 17:00)
+            time >= &self.start && time <= &self.end
+        } else {
+            // Range that crosses midnight (e.g., 22:00 - 06:00)
+            time >= &self.start || time <= &self.end
+        }
+    }
+
 }
 
 pub struct Datetime {
@@ -88,14 +124,27 @@ impl Display for Datetime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let date = &self.date;
 
-        let time = &self.time;
+        let time = &self.time.naive_time();
+
+        let Some(time) = time else {
+            return f.write_str("")
+        };
+
         let session = if self.need_session {
-            match (time.hour, date.weekday) {
-                (17..=20, Weekday::Wed) => "B",
-                (8..=11, _) => "A",
-                (13..=16, _) => "B",
-                (17..20, _) => "C",
-                _ => "",
+            //Morning Session
+            if SESSION_A.contains(time){
+                 "A"
+            }else if SESSION_B.contains(time){
+                //Afternoon Session
+                "B"
+            }else if SESSION_C.contains(time){
+                if date.weekday == Weekday::Wed{
+                    "B"
+                }else{
+                "C"
+                }
+            }else{
+                ""
             }
         } else {
             ""
@@ -111,22 +160,23 @@ impl Display for Datetime {
 
 #[cfg(test)]
 mod test {
-    use chrono::{Local, TimeZone};
+    use chrono::{Local, NaiveTime, TimeZone};
 
     use super::Datetime;
 
+
     #[test]
     fn monday_test() {
-        let morning_session =
-            Datetime::from(Local.with_ymd_and_hms(2024, 11, 4, 10, 40, 23).unwrap());
+        let  morning_session =
+            Datetime::from(Local.with_ymd_and_hms(2024, 11, 4, 10, 40, 23).unwrap()).need_session();
 
         assert_eq!(morning_session.to_string(), "241104A".to_string());
 
         let afternoon_session =
-            Datetime::from(Local.with_ymd_and_hms(2024, 11, 4, 15, 40, 23).unwrap());
+            Datetime::from(Local.with_ymd_and_hms(2024, 11, 4, 15, 40, 23).unwrap()).need_session();
 
         assert_eq!(afternoon_session.to_string(), "241104B".to_string());
-        let night_session = Datetime::from(Local.with_ymd_and_hms(2024, 11, 4, 19, 0, 23).unwrap());
+        let night_session = Datetime::from(Local.with_ymd_and_hms(2024, 11, 4, 19, 0, 23).unwrap()).need_session();
 
         assert_eq!(night_session.to_string(), "241104C".to_string());
     }
@@ -134,15 +184,15 @@ mod test {
     #[test]
     fn tuesday_test() {
         let morning_session =
-            Datetime::from(Local.with_ymd_and_hms(2024, 11, 5, 10, 40, 23).unwrap());
+            Datetime::from(Local.with_ymd_and_hms(2024, 11, 5, 10, 40, 23).unwrap()).need_session();
 
         assert_eq!(morning_session.to_string(), "241105A".to_string());
 
         let afternoon_session =
-            Datetime::from(Local.with_ymd_and_hms(2024, 11, 5, 15, 40, 23).unwrap());
+            Datetime::from(Local.with_ymd_and_hms(2024, 11, 5, 15, 40, 23).unwrap()).need_session();
 
         assert_eq!(afternoon_session.to_string(), "241105B".to_string());
-        let night_session = Datetime::from(Local.with_ymd_and_hms(2024, 11, 5, 19, 0, 23).unwrap());
+        let night_session = Datetime::from(Local.with_ymd_and_hms(2024, 11, 5, 19, 0, 23).unwrap()).need_session();
 
         assert_eq!(night_session.to_string(), "241105C".to_string());
     }
@@ -150,11 +200,11 @@ mod test {
     #[test]
     fn wednesday_test() {
         let morning_session =
-            Datetime::from(Local.with_ymd_and_hms(2024, 11, 6, 10, 40, 23).unwrap());
+            Datetime::from(Local.with_ymd_and_hms(2024, 11, 6, 10, 40, 23).unwrap()).need_session();
 
         assert_eq!(morning_session.to_string(), "241106A".to_string());
 
-        let night_session = Datetime::from(Local.with_ymd_and_hms(2024, 11, 6, 19, 0, 23).unwrap());
+        let night_session = Datetime::from(Local.with_ymd_and_hms(2024, 11, 6, 19, 0, 23).unwrap()).need_session();
 
         assert_eq!(night_session.to_string(), "241106B".to_string());
     }
@@ -162,8 +212,8 @@ mod test {
     #[test]
     fn thursday_test() {
         let morning_session =
-            Datetime::from(Local.with_ymd_and_hms(2024, 11, 7, 10, 40, 23).unwrap());
+            Datetime::from(Local.with_ymd_and_hms(2024, 11, 7, 10, 40, 23).unwrap()).need_session();
 
         assert_eq!(morning_session.to_string(), "241107A".to_string());
     }
-}
+    }
