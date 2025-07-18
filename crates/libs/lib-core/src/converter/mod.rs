@@ -4,6 +4,7 @@ use crate::{
     copiee::copy_files, exec::exec_batch_ffmpeg, progress::JobInfo, Error, ProgressSystem, Result,
 };
 pub use lib_sorter::{Bucket, Sinker};
+use lib_utils::file::FileExt;
 pub use options::{
     ArgsType, AudioCodec, ConverterOptions, FfmpegOptions, HwAccel, OutputExtension, PictureFormat,
     Resolution, VideoCodec,
@@ -13,23 +14,21 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
-use tokio::{
-    sync::{watch::Receiver as WatchReceiver, RwLock},
-    task::JoinSet,
-};
+use tokio::{sync::watch::Receiver as WatchReceiver, sync::RwLock, task::JoinSet};
+use tracing::instrument;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub enum State {
     #[default]
     Idle,
     TaskAvailable,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Converter {
     options: Option<Arc<ConverterOptions>>,
     progress_system: Option<Arc<RwLock<ProgressSystem>>>,
-    buckets: Option<Vec<(String, Bucket)>>,
+    buckets: Option<Vec<(Arc<str>, Bucket)>>,
     state: State,
     stop_signal: Option<WatchReceiver<bool>>,
 }
@@ -72,9 +71,10 @@ impl Converter {
             .collect();
 
         // Let it sink
-        let buckets: Vec<(String, Bucket)> = Sinker::sink(all_entries_path, options.need_sorting)?
-            .into_iter()
-            .collect();
+        let buckets: Vec<(Arc<str>, Bucket)> =
+            Sinker::sink(all_entries_path, options.need_sorting)?
+                .into_iter()
+                .collect();
 
         if let Some(progress_system) = &self.progress_system {
             for (title, bucket) in buckets.iter() {
@@ -86,9 +86,8 @@ impl Converter {
                 progress_system
                     .read()
                     .await
-                    .create_tracker(job_info)
-                    .await
-                    .unwrap();
+                    .create_tracker(&job_info)
+                    .await?;
             }
         }
 
@@ -102,12 +101,18 @@ impl Converter {
         &mut self,
         ffmpeg_executable: Option<&'static PathBuf>,
     ) -> Result<()> {
+        let converter_opts = format!(
+            "Converting started with options : {}",
+            serde_json::to_string(&self.options.as_deref().unwrap()).unwrap()
+        );
+
+        tracing::info!(converter_opts);
         // Ensure that a task is available before proceeding
         if !matches!(self.state, State::TaskAvailable) {
             return Err(Error::ConverterHasNoTaskAvailable);
         }
 
-        let Some(buckets) = self.buckets.clone() else {
+        let Some(buckets) = self.buckets.take() else {
             return Err(Error::ConverterHasNoTaskAvailable);
         };
 
@@ -118,20 +123,23 @@ impl Converter {
             let progress_system = self.progress_system.clone();
             let stop_signal = self.stop_signal.clone().unwrap();
             let options = self.options.clone().unwrap();
-            let name = name.clone();
+
+            let (folder_name, xml, video) = bucket.into_parts();
 
             join_set.spawn(async move {
+                tracing::info!("Spawning new thread for bucket : {}", name);
+
                 let permit = semaphore.acquire_owned().await.unwrap();
-                Converter::convert(
+                let _ = Converter::convert(
                     options.as_ref(),
-                    &name,
-                    &bucket,
+                    folder_name,
+                    xml,
+                    video,
                     stop_signal,
                     ffmpeg_executable,
                     progress_system,
                 )
-                .await
-                .unwrap();
+                .await;
 
                 drop(permit);
             });
@@ -149,21 +157,24 @@ impl Converter {
 
     async fn convert(
         options: &ConverterOptions,
-        name: &String,
-        bucket: &Bucket,
+        name: Arc<str>,
+        xml_files: Arc<[PathBuf]>,
+        video_files: Arc<[FileExt]>,
         stop_signal: WatchReceiver<bool>,
         ffmpeg_executable: Option<&'static PathBuf>,
         progress_system: Option<Arc<RwLock<ProgressSystem>>>,
     ) -> Result<()> {
+        tracing::info!("Converting files in bucket : {}", name.clone());
+
         // Create the output directory
         let mut output = options.output_dir.clone();
         let folder_name = name.clone();
-        let mut name = name.to_owned();
+        let mut name = name.to_string();
         name.push_str(" 原");
         output.push(name);
 
         if let Err(e) = create_directory_with_permissions(&output) {
-            eprintln!("Failed to create directory {:?}: {:?}", output, e);
+            tracing::error!("Failed to create directory {:?}: {:?}", output, e);
             return Err(e);
         }
 
@@ -171,26 +182,28 @@ impl Converter {
         let mut xml_dir = output.clone();
         xml_dir.push("xml");
         if let Err(e) = create_directory_with_permissions(&xml_dir) {
-            eprintln!("Failed to create directory {:?}: {:?}", xml_dir, e);
+            tracing::error!("Failed to create directory {:?}: {:?}", xml_dir, e);
             return Err(e);
         }
 
         // Copy the sorted XML files into the XML directory
         if let Err(e) = copy_files(
-            bucket.xml_files(),
-            xml_dir,
+            xml_files,
+            &xml_dir,
             folder_name.clone(),
             progress_system.clone(),
         )
         .await
         {
-            eprintln!("Failed to copy files: {:?}", e);
+            tracing::error!("Failed to copy files: {:?}", e);
             return Err(e);
         }
 
+        tracing::info!("done copying files in bucket : {}", folder_name);
+
         // Execute the FFmpeg batch processing with a stop signal
         exec_batch_ffmpeg(
-            bucket.video_files(),
+            video_files,
             output,
             options.ffmpeg_options,
             stop_signal.clone(),
@@ -200,13 +213,10 @@ impl Converter {
         )
         .await?;
 
+        tracing::info!("done converting files in bucket : {}", folder_name);
+
         if let Some(progress_system) = progress_system {
-            progress_system
-                .read()
-                .await
-                .done(folder_name.clone())
-                .await
-                .unwrap()
+            progress_system.read().await.done(folder_name).await?
         }
 
         Ok(())

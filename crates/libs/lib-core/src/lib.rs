@@ -2,16 +2,14 @@ mod converter;
 mod copiee;
 mod exec;
 mod progress;
+pub mod types;
 
-pub use converter::{
-    ArgsType, AudioCodec, Converter, ConverterOptions, FfmpegOptions, HwAccel, OutputExtension,
-    PictureFormat, Resolution, VideoCodec,
-};
 pub use error::{Error, Result};
 pub use progress::{Progress, ProgressMonitor, ProgressSystem, Stage};
 
 mod error {
-    use std::fmt::Display;
+    use crate::progress;
+    use std::fmt::{Debug, Display};
 
     pub type Result<T> = core::result::Result<T, Error>;
 
@@ -24,7 +22,7 @@ mod error {
         FfmpegError(String),
         ConverterHasNoTaskAvailable,
         SinkerError(String),
-        ConverterHasNoTracker,
+        ProgressTrackerError(progress::Error),
     }
 
     impl From<lib_sorter::Error> for Error {
@@ -44,10 +42,16 @@ mod error {
                 Error::ReadDirError(r) => f.write_str(r),
                 Error::ConverterHasNoTaskAvailable => f.write_str("Internal Error"),
                 Error::SinkerError(s) => f.write_str(s),
-                Error::ConverterHasNoTracker => f.write_str("Internal Error"),
+                Error::ProgressTrackerError(e) => std::fmt::Display::fmt(e, f),
             }
         }
     }
 
     impl std::error::Error for Error {}
+
+    impl From<progress::Error> for Error {
+        fn from(value: progress::Error) -> Self {
+            Error::ProgressTrackerError(value)
+        }
+    }
 }

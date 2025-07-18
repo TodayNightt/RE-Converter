@@ -1,26 +1,27 @@
 use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 
 use crate::progress::tracker::Stage;
 use serde::{Deserialize, Serialize};
 use typeshare::typeshare;
 
 #[typeshare]
-#[derive(Debug, Serialize, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
+// #[serde(rename_all = "camelCase")]
 pub struct JobInfo {
-    folder_name: String,
+    folder_name: Arc<str>,
     total_video: u32,
     total_xml: u32,
 }
 impl JobInfo {
-    pub fn new(folder_name: String, total_video: usize, total_xml: usize) -> Self {
+    pub fn new(folder_name: Arc<str>, total_video: usize, total_xml: usize) -> Self {
         Self {
             folder_name,
             total_video: total_video as u32,
             total_xml: total_xml as u32,
         }
     }
-    pub fn folder_name(&self) -> String {
+    pub fn folder_name(&self) -> Arc<str> {
         self.folder_name.clone()
     }
 
@@ -39,19 +40,19 @@ pub enum Message {
         job_info: JobInfo,
     },
     Update {
-        folder_name: String,
-        working_file: String,
+        folder_name: Arc<str>,
+        working_file: Arc<str>,
         action: Stage,
     },
     Done {
-        folder_name: String,
+        folder_name: Arc<str>,
     },
 }
 
 #[derive(Clone, Debug)]
 pub struct Progress {
-    folder: String,
-    file: String,
+    folder: Arc<str>,
+    file: Arc<str>,
     count: u8,
     stage: Stage,
     error_count: u8,
@@ -61,8 +62,8 @@ pub struct Progress {
 
 impl Progress {
     pub fn new(
-        folder: String,
-        file: String,
+        folder: Arc<str>,
+        file: Arc<str>,
         count: u8,
         stage: Stage,
         error_count: u8,
@@ -80,11 +81,11 @@ impl Progress {
         }
     }
 
-    pub fn folder(&self) -> String {
+    pub fn folder(&self) -> Arc<str> {
         self.folder.clone()
     }
 
-    pub fn file(&self) -> String {
+    pub fn file(&self) -> Arc<str> {
         self.file.clone()
     }
 

@@ -1,8 +1,11 @@
 use clap::Parser;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use lib_core::{
-    ArgsType, AudioCodec, Converter, ConverterOptions, FfmpegOptions, HwAccel, OutputExtension,
-    ProgressSystem, VideoCodec,
+    types::{
+        ArgsType, AudioCodec, Converter, ConverterOptions, FfmpegOptions, HwAccel, OutputExtension,
+        VideoCodec,
+    },
+    ProgressSystem,
 };
 use once_cell::sync::OnceCell;
 use rust_embed::Embed;

@@ -3,6 +3,7 @@ use crate::progress::{
     Message, Progress,
 };
 use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::{
     select,
     sync::{
@@ -13,16 +14,16 @@ use tokio::{
 };
 
 pub struct ProgressMonitor {
-    progress_trackers: RwLock<HashMap<String, ProgressTracker>>,
+    progress_trackers: RwLock<HashMap<Arc<str>, ProgressTracker>>,
     message_rx: Receiver<Message>,
-    progress_tx: Sender<Vec<Progress>>,
+    progress_tx: Sender<Arc<[Progress]>>,
     update_interval: Interval,
 }
 
 impl ProgressMonitor {
     pub fn new(
         message_rx: Receiver<Message>,
-        progress_tx: Sender<Vec<Progress>>,
+        progress_tx: Sender<Arc<[Progress]>>,
         update_interval: Interval,
     ) -> Self {
         Self {
@@ -34,7 +35,6 @@ impl ProgressMonitor {
     }
 
     pub async fn start(&mut self) {
-        println!("Starting progress monitor");
         loop {
             if self.message_rx.is_closed() {
                 break;
@@ -84,8 +84,10 @@ impl ProgressMonitor {
                         let progress_data = self.progress_trackers.read().await;
                          progress_data.values().map(|tracker| tracker.progress()).collect()
                     };
-                        let _ = self.progress_tx.send(progress).await;
-
+                    if self.progress_tx.send(progress).await.is_err(){
+                        continue;
+                    }
+                        // let _ = self.progress_tx.send(progress).await;
                 }
             }
         }

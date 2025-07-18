@@ -1,10 +1,10 @@
+use super::{bucket::Bucket, Result};
+use crate::bucket::_Bucket;
+use chrono::Local;
+use std::sync::Arc;
 use std::{collections::HashMap, ffi::OsStr, fs, fs::Metadata, path::PathBuf};
 
-use chrono::Local;
-
-use super::{bucket::Bucket, Result};
-
-pub type Buckets = HashMap<String, Bucket>;
+pub type Buckets = HashMap<Arc<str>, Bucket>;
 
 pub struct Sinker;
 
@@ -26,9 +26,7 @@ impl Sinker {
                 datetime.to_string()
             };
 
-            let b = map
-                .entry(title.clone())
-                .or_insert(Bucket::new(title.to_owned()));
+            let b = map.entry(title.clone()).or_insert(_Bucket::new(title));
 
             let file_type = file
                 .extension()
@@ -44,7 +42,12 @@ impl Sinker {
                 _ => {}
             }
         }
-        Ok(map)
+
+        let m = map
+            .into_iter()
+            .map(|(k, v)| (Arc::from(k), v.into()))
+            .collect();
+        Ok(m)
     }
 
     fn get_metadata(file: &PathBuf) -> Result<Metadata> {
@@ -81,7 +84,7 @@ mod test {
 
         let the_bucket = buckets.get("241106B").unwrap();
 
-        assert_eq!(the_bucket.title(), "241106B");
+        assert_eq!(*the_bucket.title(), *"241106B");
 
         let xml = the_bucket.xml_files();
 

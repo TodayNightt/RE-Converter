@@ -1,4 +1,5 @@
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
 
 use crate::progress::{JobInfo, Progress};
 
@@ -11,7 +12,7 @@ pub enum Stage {
 #[derive(Debug)]
 pub struct ProgressTracker {
     job_info: JobInfo,
-    current_file: String,
+    current_file: Arc<str>,
     current_xml: AtomicU32,
     current_video: AtomicU32,
     status: JobStatus,
@@ -42,7 +43,7 @@ impl ProgressTracker {
             current_xml: AtomicU32::new(0),
             current_video: AtomicU32::new(0),
             stage: Stage::Xml,
-            current_file: String::default(),
+            current_file: Arc::default(),
         }
     }
     pub fn progress(&self) -> Progress {
@@ -67,7 +68,7 @@ impl ProgressTracker {
         )
     }
 
-    fn update(&mut self, update_request: Stage, working_file: String) -> Result<(), String> {
+    fn update(&mut self, update_request: Stage, working_file: Arc<str>) -> Result<(), String> {
         if matches!(self.status, JobStatus::Pending) {
             self.status = JobStatus::Starting;
         }
@@ -118,10 +119,10 @@ impl ProgressTracker {
         Ok(())
     }
 
-    pub fn update_xml(&mut self, working_file: String) -> Result<(), String> {
+    pub fn update_xml(&mut self, working_file: Arc<str>) -> Result<(), String> {
         self.update(Stage::Xml, working_file)
     }
-    pub fn update_video(&mut self, working_file: String) -> Result<(), String> {
+    pub fn update_video(&mut self, working_file: Arc<str>) -> Result<(), String> {
         self.update(Stage::Video, working_file)
     }
 

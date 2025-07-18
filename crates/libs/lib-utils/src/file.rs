@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::{
     ffi::{OsStr, OsString},
     path::{Path, PathBuf},
@@ -6,13 +7,13 @@ use std::{
 #[derive(Debug, Clone)]
 pub struct FileExt {
     parent: PathBuf,
-    file_name: OsString,
-    extension: OsString,
+    file_name: Arc<OsStr>,
+    extension: Arc<OsStr>,
 }
 
 impl FileExt {
     pub fn path_without_extension(&self) -> PathBuf {
-        self.parent.clone().join(self.file_name.clone())
+        self.parent.clone().join(self.file_name.as_ref())
     }
 
     pub fn path_with_extension(&self) -> PathBuf {
@@ -20,11 +21,11 @@ impl FileExt {
             .with_extension(self.extension.clone())
     }
 
-    pub fn file_name(&self) -> OsString {
+    pub fn file_name(&self) -> Arc<OsStr> {
         self.file_name.clone()
     }
 
-    pub fn extension(&self) -> OsString {
+    pub fn extension(&self) -> Arc<OsStr> {
         self.extension.clone()
     }
 }
@@ -36,20 +37,14 @@ impl From<PathBuf> for FileExt {
             .unwrap_or_else(|| Path::new("")) // Default to empty path if parent is None
             .to_path_buf();
 
-        let file_name = value
-            .file_name()
-            .unwrap_or_else(|| OsStr::new("")) // Default to empty OsString if file_name is None
-            .to_os_string();
+        let file_name = value.file_name().unwrap_or_else(|| OsStr::new(""));        // Default to empty OsString if file_name is None
 
-        let extension = value
-            .extension()
-            .unwrap_or_else(|| OsStr::new("")) // Default to empty OsString if extension is None
-            .to_os_string();
+        let extension = value.extension().unwrap_or_else(|| OsStr::new("")); // Default to empty OsString if extension is None
 
         FileExt {
             parent,
-            file_name,
-            extension,
+            file_name: Arc::from(file_name),
+            extension : Arc::from(extension),
         }
     }
 }

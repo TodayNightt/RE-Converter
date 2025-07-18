@@ -8,19 +8,21 @@ use crate::{converter::FfmpegOptions, Error, ProgressSystem, Result, Stage};
 use tokio::{process::Command, select, sync::watch::Receiver, task::JoinSet};
 
 pub async fn exec_batch_ffmpeg(
-    files: Vec<FileExt>,
+    files: Arc<[FileExt]>,
     des: PathBuf,
     flag: FfmpegOptions,
     stop_signal: Receiver<bool>, // Add the stop signal
     ffmpeg_executable: Option<&'static PathBuf>,
     progress_system: Option<Arc<RwLock<ProgressSystem>>>,
-    folder_name: String,
+    folder_name: Arc<str>,
 ) -> Result<()> {
     let mut join_set = JoinSet::new();
 
     let semaphore = Arc::new(tokio::sync::Semaphore::new(2));
 
-    for file in files {
+    let files = files.clone();
+
+    for file in files.iter() {
         let semaphore = semaphore.clone();
         let des = des.clone();
         let mut stop_signal = stop_signal.clone();
@@ -30,10 +32,13 @@ pub async fn exec_batch_ffmpeg(
             .unwrap()
             .to_string()
             .to_lowercase();
-        let folder_name = folder_name.clone();
+        let folder_name = folder_name.to_owned();
         let progress_system = progress_system.clone();
 
+        let file = file.clone();
+
         join_set.spawn(async move {
+
             let permit = semaphore.acquire_owned().await.unwrap();
             let mut child = exec_ffmpeg(file, des, flag, ffmpeg_executable)
                 .await
@@ -48,6 +53,8 @@ pub async fn exec_batch_ffmpeg(
                     if should_stop{
                        child.kill().await.unwrap();
                     }
+
+                    tracing::info!("Killing execution for file : {}",file_name);
                 }
             
                 status = child.wait() =>{
@@ -56,19 +63,13 @@ pub async fn exec_batch_ffmpeg(
                             let mut err_output = String::new();
                             use tokio::io::AsyncReadExt;
                             stderr.read_to_string(&mut err_output).await.unwrap();
-                        
-            
-                            println!("File : {:?}\nstderr : {}\n(error_code : {:?})",file_name,err_output, output.code());
-                            // return Err(Error::FfmpegError(format!(
-                            //     "{} -- {} (error_code: {})",
-                            //     source_name.to_string_lossy(),
-                            //     String::from_utf8_lossy(&output.stderr),
-                            //     output.status.code().unwrap_or(-1)
-                            // )));
+                            tracing::error!("File : {:?}[{}]\nstderr : {}\n",file_name,folder_name,err_output);
+
+                            return Err(Error::FfmpegError(err_output));
                         }
             
                         if let Some(tracker) = progress_system{
-                            tracker.write().await.update_progress(folder_name, Stage::Video,file_name).await.unwrap()
+                            tracker.write().await.update_progress(folder_name, Stage::Video,&file_name).await?;
                         }
             
                     }
@@ -78,6 +79,8 @@ pub async fn exec_batch_ffmpeg(
             }
 
             drop(permit);
+
+            Ok(())
         });
     }
     let mut ss = stop_signal.clone();
@@ -111,7 +114,7 @@ async fn exec_ffmpeg(
 ) -> Result<Child> {
     let source_name = &source.file_name();
     let mut file_des = des.clone();
-    file_des.push(source_name);
+    file_des.push(source_name.as_ref());
 
     let args = flag.build(
         source.path_with_extension(),
