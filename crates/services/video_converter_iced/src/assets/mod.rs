@@ -24,7 +24,7 @@ pub fn ffmpeg_instance() -> &'static PathBuf {
         if !ffmpeg_path.exists() {
             {
                 let mut file = File::create(&ffmpeg_path).unwrap();
-                file.write_all(&Binaries::get("ffmpeg.exe").unwrap().data)
+                file.write_all(&Binaries::get("ffmpeg").unwrap().data)
                     .unwrap();
             }
         }
