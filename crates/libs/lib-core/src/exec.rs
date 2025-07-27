@@ -16,6 +16,12 @@ pub async fn exec_batch_ffmpeg(
     progress_system: Option<Arc<RwLock<ProgressSystem>>>,
     folder_name: Arc<str>,
 ) -> Result<()> {
+    tracing::info!(
+        "converting with options : {:?} [{}]",
+        flag.build(),
+        folder_name
+    );
+
     let mut join_set = JoinSet::new();
 
     let semaphore = Arc::new(tokio::sync::Semaphore::new(2));
@@ -38,25 +44,24 @@ pub async fn exec_batch_ffmpeg(
         let file = file.clone();
 
         join_set.spawn(async move {
-
             let permit = semaphore.acquire_owned().await.unwrap();
             let mut child = exec_ffmpeg(file, des, flag, ffmpeg_executable)
                 .await
-                .unwrap();
+                ?;
 
             let mut stderr = child.stderr.take().unwrap();
 
             select! {
                 _ = stop_signal.changed() =>{
                     let should_stop = *stop_signal.wait_for(|val|*val).await.unwrap();
-            
+
                     if should_stop{
                        child.kill().await.unwrap();
                     }
 
                     tracing::info!("Killing execution for file : {}",file_name);
                 }
-            
+
                 status = child.wait() =>{
                     if let Ok(output) =status {
                         if !output.success() {
@@ -67,15 +72,15 @@ pub async fn exec_batch_ffmpeg(
 
                             return Err(Error::FfmpegError(err_output));
                         }
-            
+
                         if let Some(tracker) = progress_system{
                             tracker.write().await.update_progress(folder_name, Stage::Video,&file_name).await?;
                         }
-            
+
                     }
                 }
-            
-            
+
+
             }
 
             drop(permit);
@@ -96,8 +101,14 @@ pub async fn exec_batch_ffmpeg(
             }
 
             result = join_set.join_next()=>{
-                if result.is_none(){
+                let Some(res) = result else {
                     break;
+                };
+
+                if let Err(err) = res.unwrap() {
+                    tracing::error!("Error executing : {:?}",err);
+
+                    return Err(err);
                 }
             }
         }
@@ -121,6 +132,8 @@ async fn exec_ffmpeg(
         file_des.with_extension(flag.output_extension.to_string()),
     );
 
+    tracing::info!("executing with : {:?}", args);
+
     let command;
 
     if let Some(ffmpeg_executable) = ffmpeg_executable {
@@ -139,7 +152,6 @@ async fn exec_ffmpeg(
     cmd.args(args)
         .stderr(Stdio::piped())
         .stdout(Stdio::piped())
-        .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .map_err(|err| Error::FfmpegError(format!("Failed to execute ffmpeg: {err:?}")))
 }
