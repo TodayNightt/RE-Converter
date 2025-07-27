@@ -5,3 +5,5 @@ binaries
 iced
 
 .idea
+
+crates/services/video_converter
