@@ -15,7 +15,6 @@ use std::{
     sync::Arc,
 };
 use tokio::{sync::watch::Receiver as WatchReceiver, sync::RwLock, task::JoinSet};
-use tracing::instrument;
 
 #[derive(Default, Debug)]
 pub enum State {
@@ -116,8 +115,12 @@ impl Converter {
             return Err(Error::ConverterHasNoTaskAvailable);
         };
 
+        let max_concurrency = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(2);
+
         let mut join_set = JoinSet::new();
-        let semaphore = Arc::new(tokio::sync::Semaphore::new(10));
+        let semaphore = Arc::new(tokio::sync::Semaphore::new(max_concurrency));
         for (name, bucket) in buckets.into_iter() {
             let semaphore = semaphore.clone();
             let progress_system = self.progress_system.clone();
