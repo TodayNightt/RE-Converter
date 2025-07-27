@@ -197,7 +197,14 @@ impl FfmpegOptions {
             output_extension,
         }
     }
-    pub fn build(self, input: PathBuf, output: PathBuf) -> Vec<String> {
+
+    pub fn build_with_io(self, input: PathBuf, output: PathBuf) -> Vec<String> {
+        let (mut args, input_offset, _) = self.build();
+        args.insert(input_offset, input.to_str().unwrap().to_string());
+        args.push(output.to_str().unwrap().to_string());
+        args
+    }
+    pub fn build(&self) -> (Vec<String>, usize, usize) {
         let mut args = Vec::new();
 
         if let Some(hwaccel) = self.hwaccel {
@@ -205,12 +212,15 @@ impl FfmpegOptions {
 
             if let ArgsType::Custom(video_codec) = self.video_codec {
                 if matches!(video_codec, VideoCodec::H264NVENC) {
-                    args.extend(Arg::new("hwaccel_output_format").value("cuda").build());
+                    args.extend(Arg::new("hwaccel_output_format").value("auto").build());
                 }
             }
         }
 
-        args.extend(Arg::new("i").value(input.to_str().unwrap()).build());
+        args.extend(Arg::new("i").build());
+        // args.extend(Arg::new("i").value(input.to_str().unwrap()).build());
+
+        let input_offset = args.len();
 
         if !matches!(self.resolution, ArgsType::MatchSource) {
             args.extend(
@@ -277,9 +287,11 @@ impl FfmpegOptions {
             }
         }
 
-        args.push(output.to_str().unwrap().to_string());
+        // args.push(output.to_str().unwrap().to_string());
 
-        args
+        let output_offset = args.len();
+
+        (args, input_offset, output_offset)
     }
 }
 
@@ -365,7 +377,7 @@ mod test {
             output_extension: OutputExtension::Default,
         };
 
-        let args = options.build(
+        let args = options.build_with_io(
             PathBuf::from_str("/s/video/a.mp4").unwrap(),
             PathBuf::from_str("/s/video/a.mkv").unwrap(),
         );
@@ -403,7 +415,7 @@ mod test {
             OutputExtension::Mkv,
         );
 
-        let args = options.build(
+        let args = options.build_with_io(
             PathBuf::from_str("/s/video/a.mp4").unwrap(),
             PathBuf::from_str("/s/video/a.mkv").unwrap(),
         );

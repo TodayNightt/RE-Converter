@@ -116,7 +116,7 @@ async fn exec_ffmpeg(
     let mut file_des = des.clone();
     file_des.push(source_name.as_ref());
 
-    let args = flag.build(
+    let args = flag.build_with_io(
         source.path_with_extension(),
         file_des.with_extension(flag.output_extension.to_string()),
     );
