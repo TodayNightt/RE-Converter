@@ -129,12 +129,17 @@ async fn exec_ffmpeg(
         command = Some(Command::new("ffmpeg"));
     }
 
-    command
-        .unwrap()
-        .args(args)
+    let mut cmd = command.unwrap();
+
+    #[cfg(target_os = "windows")]
+    {
+        cmd = cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    cmd.args(args)
         .stderr(Stdio::piped())
         .stdout(Stdio::piped())
         .creation_flags(CREATE_NO_WINDOW)
         .spawn()
-        .map_err(|err| Error::FfmpegError(format!("Failed to execute FFmpeg: {:?}", err)))
+        .map_err(|err| Error::FfmpegError(format!("Failed to execute ffmpeg: {err:?}")))
 }
