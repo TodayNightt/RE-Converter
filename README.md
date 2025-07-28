@@ -1,5 +1,8 @@
 <div align="center">
 
+<br>
+<img src="assets/img.png" height="100" alt="RE-Converter Showcase">
+
 # RE:Converter
 
 <img src="assets/showcase.gif" height="500" alt="RE-Converter Showcase">
