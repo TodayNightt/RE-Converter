@@ -27,13 +27,20 @@ fn ffmpeg_instance() -> &'static PathBuf {
         use std::fs::File;
         use std::io::Write;
 
+        let ffmpeg_name = if cfg!(target_os = "windows") {
+            "ffmpeg.exe"
+        } else {
+            "ffmpeg"
+        };
+
         let temp_dir = std::env::temp_dir();
-        let ffmpeg_path = temp_dir.join("ffmpeg.exe");
+
+        let ffmpeg_path = temp_dir.join(ffmpeg_name);
 
         if !ffmpeg_path.exists() {
             {
                 let mut file = File::create(&ffmpeg_path).unwrap();
-                file.write_all(&Binaries::get("ffmpeg.exe").unwrap().data)
+                file.write_all(&Binaries::get(ffmpeg_name).unwrap().data)
                     .unwrap();
             }
         }
