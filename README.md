@@ -1,6 +1,8 @@
 <div align="center">
 
-# RE-Converter
+# RE:Converter
+
+<img src="assets/showcase.gif" height="500" alt="RE-Converter Showcase">
 
 </div>
 
