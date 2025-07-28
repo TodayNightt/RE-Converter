@@ -23,9 +23,12 @@ mod pages;
 use crate::config::Config;
 use crate::pages::SetupPageMessage;
 use crate::{
-    assets::{Assets, ffmpeg_instance},
+    assets::{Assets},
     pages::{Message, Page, Pages, ProgressPageMessage},
 };
+
+#[cfg(feature = "embedded")]
+use crate::assets::ffmpeg_instance;
 
 fn main() -> iced::Result {
     // console_subscriber::init();
@@ -108,6 +111,7 @@ impl ReConverter {
                     return Task::done(Message::ProgressPage(ProgressPageMessage::Debug));
                 }
                 Event::Window(window::Event::CloseRequested) => {
+                    #[cfg(feature = "embedded")]
                     let _ = std::fs::remove_file(ffmpeg_instance());
                     return exit();
                 }

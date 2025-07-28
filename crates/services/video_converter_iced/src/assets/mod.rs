@@ -1,17 +1,21 @@
+#[cfg(feature = "embedded")]
 use once_cell::sync::OnceCell;
-use rust_embed::Embed;
+#[cfg(feature = "embedded")]
 use std::path::PathBuf;
 
+use rust_embed::Embed;
 pub mod svg;
 
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/assets"]
 pub struct Assets;
 
+#[cfg(feature = "embedded")]
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/../../../binaries"]
 struct Binaries;
 
+#[cfg(feature = "embedded")]
 pub fn ffmpeg_instance() -> &'static PathBuf {
     static INSTANCE: OnceCell<PathBuf> = OnceCell::new();
     INSTANCE.get_or_init(|| {

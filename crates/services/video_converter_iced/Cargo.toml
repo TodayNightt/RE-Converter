@@ -27,8 +27,9 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing-appender = { workspace = true }
 
 
+[features]
+embedded = []
+
 [[bin]]
 path = "src/main.rs"
 name = "reconv_ui"
-
-

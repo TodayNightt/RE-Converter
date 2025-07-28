@@ -14,7 +14,7 @@ use lib_core::{
 
 use crate::{
     Message,
-    assets::{ffmpeg_instance, svg::back_arrow},
+    assets::svg::back_arrow,
     pages::{
         Page, Pages,
         progress::{ProgressPage, ProgressPageMessage},
@@ -32,6 +32,9 @@ use crate::{
 
 use crate::config::Config;
 pub use error::Error;
+
+#[cfg(feature = "embedded")]
+use crate::assets::ffmpeg_instance;
 
 mod types;
 
@@ -628,10 +631,14 @@ impl SetupPage {
         let task = Task::future(async move {
             converter.prepare_task(Arc::new(options)).await.unwrap();
 
+            #[cfg(feature = "embedded")]
             converter
                 .start_conversion(Some(ffmpeg_instance()))
                 .await
                 .unwrap();
+
+            #[cfg(not(feature = "embedded"))]
+            converter.start_conversion(None).await.unwrap();
 
             Message::ProgressPage(ProgressPageMessage::DoneConvert)
         });
