@@ -7,15 +7,20 @@ use lib_core::{
     },
     ProgressSystem,
 };
+#[cfg(feature = "embedded")]
 use once_cell::sync::OnceCell;
+#[cfg(feature = "embedded")]
 use rust_embed::Embed;
+
 use std::{collections::HashMap, error::Error, path::PathBuf, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, task::JoinSet, time::sleep};
 
+#[cfg(feature = "embedded")]
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/../../../binaries"]
 struct Binaries;
 
+#[cfg(feature = "embedded")]
 fn ffmpeg_instance() -> &'static PathBuf {
     static INSTANCE: OnceCell<PathBuf> = OnceCell::new();
     INSTANCE.get_or_init(|| {
@@ -81,10 +86,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             )))
             .await
             .unwrap();
+
+        #[cfg(feature = "embedded")]
         converter
             .start_conversion(Some(ffmpeg_instance()))
             .await
             .unwrap();
+
+        #[cfg(not(feature = "embedded"))]
+        converter.start_conversion(None).await.unwrap();
     });
 
     let progress_system_clone = progress_system.clone();
@@ -156,6 +166,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     sleep(Duration::from_secs(5)).await;
 
+    #[cfg(feature = "embedded")]
     std::fs::remove_file(ffmpeg_instance())?;
 
     Ok(())

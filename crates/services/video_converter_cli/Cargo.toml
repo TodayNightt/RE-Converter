@@ -17,3 +17,6 @@ lib-core = { workspace = true }
 [[bin]]
 name = "reconv"
 path = "src/main.rs"
+
+[features]
+embedded = []
